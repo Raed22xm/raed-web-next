@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Navbar from "@/components/navbar/navbar";
 import Footer from "@/components/footer/footer";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
@@ -13,6 +13,7 @@ import AspectRatioOutlinedIcon from "@mui/icons-material/AspectRatioOutlined";
 import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import { useAuthGuard } from "@/services/protectpage/index";
 import { useRouter } from "next/router";
+import { getAllResizes, deleteResize } from "@/services/resize/resize";
 type ResizeStatus = "Ready" | "Processing" | "Failed";
 
 interface ResizeItem {
@@ -27,60 +28,80 @@ interface ResizeItem {
     status: ResizeStatus;
     notes?: string;
     tags?: string[];
+    resizedImageUrl?: string;
+    originalImageUrl?: string;
 }
 
-const mockResizes: ResizeItem[] = [
-    {
-        id: "RSZ-001",
-        fileName: "marketing-hero.png",
-        originalDimensions: "2400 × 1600",
-        targetDimensions: "1200 × 800",
-        outputFormat: "JPG",
-        createdAt: "Nov 10, 2025 • 14:32",
-        sizeBefore: "3.2 MB",
-        sizeAfter: "1.1 MB",
-        status: "Ready",
-        notes: "Homepage hero for Q4 campaign",
-        tags: ["Web", "Hero"],
-    },
-    {
-        id: "RSZ-002",
-        fileName: "product-shot.webp",
-        originalDimensions: "1600 × 1600",
-        targetDimensions: "1080 × 1080",
-        outputFormat: "PNG",
-        createdAt: "Nov 09, 2025 • 09:18",
-        sizeBefore: "2.1 MB",
-        sizeAfter: "820 KB",
-        status: "Processing",
-        notes: "Square crop for marketplace listing",
-        tags: ["Catalog"],
-    },
-    {
-        id: "RSZ-003",
-        fileName: "event-poster.jpg",
-        originalDimensions: "4096 × 2730",
-        targetDimensions: "1920 × 1080",
-        outputFormat: "WebP",
-        createdAt: "Nov 08, 2025 • 20:44",
-        sizeBefore: "5.6 MB",
-        sizeAfter: "1.4 MB",
-        status: "Ready",
-        tags: ["Events", "Social"],
-    },
-    {
-        id: "RSZ-004",
-        fileName: "team-portrait.png",
-        originalDimensions: "3200 × 2133",
-        targetDimensions: "1280 × 720",
-        outputFormat: "JPG",
-        createdAt: "Nov 05, 2025 • 11:07",
-        sizeBefore: "4.4 MB",
-        sizeAfter: "980 KB",
-        status: "Failed",
-        notes: "Retry with lighter compression",
-    },
-];
+// API Response interface
+interface ApiResizeItem {
+    _id: string;
+    imageLink: string;
+    imageFormat: string;
+    date: string;
+    options: {
+        imageLink: string;
+        manageAspectRatio: boolean;
+        size: string;
+        width: string;
+        height: string;
+        outputFormat: string;
+    };
+    userId: string;
+}
+
+// Helper function to format date
+function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    return `${month} ${day}, ${year} • ${hours}:${minutes}`;
+}
+
+// Helper function to extract dimensions from width/height strings (e.g., "2000px" -> "2000")
+function extractDimension(dimension: string): string {
+    return dimension.replace("px", "").trim();
+}
+
+// Helper function to get filename from URL
+function getFileNameFromUrl(url: string): string {
+    try {
+        const urlParts = url.split("/");
+        const lastPart = urlParts[urlParts.length - 1];
+        // Remove query parameters if any
+        const fileName = lastPart.split("?")[0];
+        return fileName || "image";
+    } catch {
+        return "image";
+    }
+}
+
+// Map API response to ResizeItem
+function mapApiResizeToResizeItem(apiItem: ApiResizeItem): ResizeItem {
+    const width = extractDimension(apiItem.options.width);
+    const height = extractDimension(apiItem.options.height);
+    const targetDimensions = `${width} × ${height}`;
+    
+    // Extract original dimensions from original image URL if possible, otherwise use target
+    const originalDimensions = targetDimensions; // We don't have original dimensions in API, using target as fallback
+    
+    return {
+        id: apiItem._id,
+        fileName: getFileNameFromUrl(apiItem.imageLink),
+        originalDimensions: originalDimensions,
+        targetDimensions: targetDimensions,
+        outputFormat: apiItem.options.outputFormat.toUpperCase(),
+        createdAt: formatDate(apiItem.date),
+        sizeBefore: "N/A", // Not available in API response
+        sizeAfter: "N/A", // Not available in API response
+        status: "Ready", // Assuming all completed resizes are "Ready"
+        resizedImageUrl: apiItem.imageLink,
+        originalImageUrl: apiItem.options.imageLink,
+    };
+}
 
 function statusStyles(status: ResizeStatus) {
     switch (status) {
@@ -98,21 +119,102 @@ function statusStyles(status: ResizeStatus) {
 function DashboardPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedStatus, setSelectedStatus] = useState<ResizeStatus | "All">("All");
-    const [selectedResizeId, setSelectedResizeId] = useState<string>(mockResizes[0]?.id ?? "");
+    const [resizes, setResizes] = useState<ResizeItem[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedResizeId, setSelectedResizeId] = useState<string>("");
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const router = useRouter();
+
+    // Function to fetch resizes (reusable)
+    const fetchResizes = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            
+            // Get userId from localStorage
+            const storedUserData = localStorage.getItem("userData");
+            if (!storedUserData) {
+                setError("User not authenticated");
+                setIsLoading(false);
+                return;
+            }
+
+            const parsedUserData = JSON.parse(storedUserData);
+            const userId = parsedUserData?.user?._id || "";
+            
+            if (!userId) {
+                setError("User ID not found");
+                setIsLoading(false);
+                return;
+            }
+
+            // Fetch resizes from API
+            const response = await getAllResizes(userId);
+            
+            if (response.data?.data && Array.isArray(response.data.data)) {
+                const mappedResizes = response.data.data.map(mapApiResizeToResizeItem);
+                setResizes(mappedResizes);
+                // Set first resize as selected if available
+                if (mappedResizes.length > 0) {
+                    setSelectedResizeId(mappedResizes[0].id);
+                } else {
+                    setSelectedResizeId("");
+                }
+            } else {
+                setResizes([]);
+                setSelectedResizeId("");
+            }
+        } catch (err: any) {
+            console.error("Failed to fetch resizes:", err);
+            setError(err?.response?.data?.message || err?.message || "Failed to fetch resizes");
+            setResizes([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Get userId from localStorage and fetch resizes on mount
+    useEffect(() => {
+        fetchResizes();
+    }, []);
+
+    // Handle delete resize
+    const handleDeleteResize = async (resizeId: string) => {
+        if (!confirm("Are you sure you want to delete this resize? This action cannot be undone.")) {
+            return;
+        }
+
+        try {
+            setIsDeleting(true);
+            await deleteResize(resizeId);
+            
+            // Refresh the list after successful deletion
+            await fetchResizes();
+            
+            // Show success message (optional)
+            alert("Resize deleted successfully");
+        } catch (err: any) {
+            console.error("Failed to delete resize:", err);
+            alert(err?.response?.data?.message || err?.message || "Failed to delete resize");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const filteredResizes = useMemo(() => {
-        return mockResizes.filter((item) => {
+        return resizes.filter((item) => {
             const matchesSearch =
                 item.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 item.id.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = selectedStatus === "All" || item.status === selectedStatus;
             return matchesSearch && matchesStatus;
         });
-    }, [searchTerm, selectedStatus]);
+    }, [resizes, searchTerm, selectedStatus]);
 
     const activeResize = useMemo(
-        () => mockResizes.find((item) => item.id === selectedResizeId),
-        [selectedResizeId]
+        () => resizes.find((item) => item.id === selectedResizeId),
+        [resizes, selectedResizeId]
     );
 
     const ready = useAuthGuard();
@@ -125,7 +227,7 @@ function DashboardPage() {
     // like dashboard page measn if user is not logged in then user will be redirected to login 
     
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-indigo-50">
+        <div className="min-h-screen bg-linear-to-br from-slate-100 via-white to-indigo-50">
             <Navbar />
 
             <main className="mx-auto max-w-7xl px-6 py-10">
@@ -142,21 +244,12 @@ function DashboardPage() {
                     <div className="flex gap-3">
                         <button
                             type="button"
-                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-600"
+                            className="rounded-xl border border-transparent bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
                             onClick={() => {
-                                console.info("[Dashboard] Trigger new resize");
+                                router.push("/upload");
                             }}
                         >
                             New Resize
-                        </button>
-                        <button
-                            type="button"
-                            className="rounded-xl border border-transparent bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-                            onClick={() => {
-                                console.info("[Dashboard] Navigate to upload flow");
-                            }}
-                        >
-                            Go to Uploads
                         </button>
                     </div>
                 </header>
@@ -193,7 +286,16 @@ function DashboardPage() {
                         </div>
 
                         <div className="mt-6 space-y-4">
-                            {filteredResizes.length === 0 ? (
+                            {isLoading ? (
+                                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-12 text-center">
+                                    <p className="text-sm font-medium text-slate-600">Loading resizes...</p>
+                                </div>
+                            ) : error ? (
+                                <div className="rounded-2xl border border-dashed border-rose-200 bg-rose-50/60 px-6 py-12 text-center">
+                                    <p className="text-sm font-medium text-rose-600">Error loading resizes</p>
+                                    <p className="mt-2 text-sm text-rose-400">{error}</p>
+                                </div>
+                            ) : filteredResizes.length === 0 ? (
                                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-12 text-center">
                                     <p className="text-sm font-medium text-slate-600">No resizes found</p>
                                     <p className="mt-2 text-sm text-slate-400">
@@ -286,13 +388,23 @@ function DashboardPage() {
                                 </div>
 
                                 <div className="mt-6 grid gap-4">
-                                    <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/60 p-6">
+                                    <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-6">
                                         <div className="flex items-center justify-center">
-                                            <div className="h-40 w-full max-w-sm rounded-2xl bg-gradient-to-br from-indigo-200 via-white to-indigo-100 shadow-inner" />
+                                            {activeResize.resizedImageUrl ? (
+                                                <img
+                                                    src={activeResize.resizedImageUrl}
+                                                    alt={activeResize.fileName}
+                                                    className="h-auto max-h-64 w-full max-w-sm rounded-2xl object-contain shadow-lg"
+                                                />
+                                            ) : (
+                                                <div className="h-40 w-full max-w-sm rounded-2xl bg-linear-to-br from-indigo-200 via-white to-indigo-100 shadow-inner" />
+                                            )}
                                         </div>
-                                        <p className="mt-4 text-center text-xs text-slate-500">
-                                            Preview placeholder — actual preview will appear once linked.
-                                        </p>
+                                        {!activeResize.resizedImageUrl && (
+                                            <p className="mt-4 text-center text-xs text-slate-500">
+                                                Preview placeholder — actual preview will appear once linked.
+                                            </p>
+                                        )}
                                     </div>
 
                                     <dl className="grid grid-cols-1 gap-4 text-sm text-slate-600 sm:grid-cols-2">
@@ -317,10 +429,10 @@ function DashboardPage() {
                                         <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                                             <div className="flex items-center gap-2 text-slate-500">
                                                 <StorageOutlinedIcon fontSize="small" />
-                                                <dt>Size</dt>
+                                                <dt>Final Size</dt>
                                             </div>
                                             <dd className="mt-1 text-sm font-semibold text-slate-900">
-                                                {activeResize.sizeBefore} → {activeResize.sizeAfter}
+                                                {activeResize.targetDimensions}
                                             </dd>
                                         </div>
                                         <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
@@ -369,7 +481,11 @@ function DashboardPage() {
                                         type="button"
                                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:text-indigo-600"
                                         onClick={() => {
-                                            console.info("[Dashboard] Open resize details", activeResize.id);
+                                            if (activeResize.resizedImageUrl) {
+                                                window.open(activeResize.resizedImageUrl, "_blank");
+                                            } else {
+                                                console.info("[Dashboard] Open resize details", activeResize.id);
+                                            }
                                         }}
                                     >
                                         <OpenInNewOutlinedIcon fontSize="small" />
@@ -377,13 +493,16 @@ function DashboardPage() {
                                     </button>
                                     <button
                                         type="button"
-                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                         onClick={() => {
-                                            console.warn("[Dashboard] Delete resize requested", activeResize.id);
+                                            if (activeResize) {
+                                                handleDeleteResize(activeResize.id);
+                                            }
                                         }}
+                                        disabled={isDeleting}
                                     >
                                         <DeleteOutlineOutlinedIcon fontSize="small" />
-                                        Delete Resize
+                                        {isDeleting ? "Deleting..." : "Delete Resize"}
                                     </button>
                                 </div>
                             </div>

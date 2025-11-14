@@ -1,4 +1,5 @@
 import AspectRatioSharpIcon from '@mui/icons-material/AspectRatioSharp';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -31,10 +32,18 @@ function Navbar() {
                 <AspectRatioSharpIcon />
                 <h2>ResizeHub</h2>
             </div>
-            <div className='mr-20'>
+            <div className='mr-20 flex items-center gap-4'>
                 {
                     isLoggedIn ? (
-                        <div className="relative inline-block text-left">
+                        <>
+                            <Link 
+                                href="/dashboard" 
+                                className='hover:bg-gray-100 p-2 rounded-md px-4 inline-flex items-center justify-center gap-2 transition-colors'
+                            >
+                                <DashboardOutlinedIcon fontSize="small" />
+                                <span className="font-medium">Dashboard</span>
+                            </Link>
+                            <div className="relative inline-block text-left">
                             <button
                                 type="button"
                                 className="flex items-center gap-2 focus:outline-none"
@@ -98,6 +107,7 @@ function Navbar() {
                                 </div>
                             )}
                         </div>
+                        </>
                     ) : (
                         <Link href="/auth" className='mr-5 hover:bg-gray-100 p-2 rounded-md px-6 inline-flex items-center justify-center'>
                             Login

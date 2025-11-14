@@ -7,9 +7,12 @@ import AspectRatioOutlinedIcon from "@mui/icons-material/AspectRatioOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import PhotoSizeSelectActualOutlinedIcon from "@mui/icons-material/PhotoSizeSelectActualOutlined";
 import type { ChangeEvent } from "react";
-import { useState } from "react";
-import { useAuthGuard } from "@/services/protectpage";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { useAuthGuard } from "@/services/protectpage";
+import { createResize } from "@/services/resize/resize";
+import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 const inputClasses =
     "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60";
 
@@ -27,12 +30,22 @@ function Upload() {
     const [userImg, setUserImg] = useState<string>("")
     const [isUploading, setIsUploading] = useState<boolean>(false)
     const [uploadError, setUploadError] = useState<string | null>(null)
+    const [userId, setUserId] = useState<string>("")
+    const [imageFormat, setImageFormat] = useState<string>("")
+    const [isResizing, setIsResizing] = useState<boolean>(false)
+    const [resizedImageUrl, setResizedImageUrl] = useState<string>("")
+    const [successMessage, setSuccessMessage] = useState<string>("")
+    const router = useRouter()
 
     async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
         const file = e.target?.files?.[0]
         if (!file) {
             return
         }
+
+        // Extract image format from file
+        const fileExtension = file.name.split('.').pop()?.toLowerCase() || ""
+        setImageFormat(fileExtension)
 
         setUploadError(null)
         setIsUploading(true)
@@ -80,13 +93,92 @@ function Upload() {
 
     const [outputFormat,setOutputFormat] = useState<string>("JPG")
 
-    const [quality, setQuality]= useState<number>(85)
-    
-    function handleResize(){
-        let userPrefrence = {
-            width , height , aspect , presetSizes , outputFormat , quality
+    useEffect(() => {
+        // Get userId from localStorage
+        const storedUserData = localStorage.getItem("userData");
+        if (storedUserData) {
+            try {
+                const parsedUserData = JSON.parse(storedUserData);
+                const userIdFromStorage = parsedUserData?.user?._id || "";
+                setUserId(userIdFromStorage);
+            } catch (error) {
+                console.error("Failed to parse userData from localStorage", error);
+            }
         }
-        console.log(userPrefrence)
+    }, [])
+    
+    async function handleResize(){
+        if (!userImg) {
+            setUploadError("Please upload an image first");
+            return;
+        }
+
+        if (!userId) {
+            setUploadError("User not authenticated");
+            return;
+        }
+
+        // Determine width and height
+        let finalWidth = width;
+        let finalHeight = height;
+
+        // If preset is selected, parse width and height from preset
+        if (presetSizes) {
+            const [presetWidth, presetHeight] = presetSizes.split("x");
+            finalWidth = presetWidth;
+            finalHeight = presetHeight;
+        }
+
+        // Validate width and height
+        if (!finalWidth || !finalHeight) {
+            setUploadError("Please enter width and height or select a preset size");
+            return;
+        }
+
+        // Format the data according to the required structure
+        const resizePayload = {
+            imageLink: userImg,
+            imageFormat: imageFormat || "jpg",
+            manageAspectRatio: aspect,
+            size: "custom",
+            width: `${finalWidth}px`,
+            height: `${finalHeight}px`,
+            outputFormat: outputFormat.toLowerCase() === "original" ? imageFormat || "jpg" : outputFormat.toLowerCase(),
+            userId: userId
+        }
+
+        setIsResizing(true);
+        setUploadError(null);
+
+        try {
+            const response = await createResize(resizePayload);
+            console.log("Resize successful:", response.data);
+            
+            // Handle success response
+            if (response.data?.success && response.data?.resizedImageUrl) {
+                setResizedImageUrl(response.data.resizedImageUrl);
+                setSuccessMessage(response.data.message || "Image resized and uploaded successfully");
+                setUploadError(null);
+                // Scroll to the resized image section
+                setTimeout(() => {
+                    const element = document.getElementById("resized-image-section");
+                    if (element) {
+                        element.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                }, 100);
+            } else {
+                setUploadError("Resize completed but no image URL received");
+            }
+        } catch (error: any) {
+            console.error("Resize failed", error);
+            setUploadError(
+                error?.response?.data?.message || error?.message || "Failed to resize image. Please try again."
+            );
+            setResizedImageUrl("");
+            setSuccessMessage("");
+        } finally {
+            setIsResizing(false);
+        }
     }
 
     const ready = useAuthGuard()
@@ -104,7 +196,7 @@ function Upload() {
                         Resize Your Images
                     </h1>
                     <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                        Upload your images and customize dimensions, format, and quality settings
+                        Upload your images and customize dimensions and format settings
                         for perfect results.
                     </p>
                 </div>
@@ -184,10 +276,13 @@ function Upload() {
                                     <PhotoSizeSelectActualOutlinedIcon className="text-slate-500" fontSize="small" />
                                     Width (px)
                                 </span>
-                                <input onChange={(e)=> { setWidth(e.target.value)}}
-                                
+                                <input onChange={(e)=> { 
+                                    setWidth(e.target.value);
+                                    setPresetSizes(""); // Clear preset when manually entering
+                                }}
                                     type="number"
                                     placeholder="1920"
+                                    value={width}
                                     className={inputClasses}
                                 />
                             </label>
@@ -198,9 +293,13 @@ function Upload() {
                                     <PhotoSizeSelectActualOutlinedIcon className="text-slate-500" fontSize="small" />
                                     Height (px)
                                 </span>
-                                <input onChange={(e)=> {setHeight(e.target.value)}}
+                                <input onChange={(e)=> {
+                                    setHeight(e.target.value);
+                                    setPresetSizes(""); // Clear preset when manually entering
+                                }}
                                     type="number"
                                     placeholder="1080"
+                                    value={height}
                                     className={inputClasses}
                                 />
                             </label>
@@ -224,28 +323,44 @@ function Upload() {
                                 <span className="text-sm font-medium text-slate-700">Preset Sizes</span>
                             </label>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <button onClick={()=>{setPresetSizes("1920x1080")}}
+                                <button onClick={()=>{
+                                    setPresetSizes("1920x1080");
+                                    setWidth("1920");
+                                    setHeight("1080");
+                                }}
                                     type="button"
                                     className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
                                     style={presetSizes === "1920x1080" ? { borderColor: "indigo" } : undefined}
                                 >
                                     1920x1080
                                 </button>
-                                <button onClick={()=>{setPresetSizes("1280x720")}}
+                                <button onClick={()=>{
+                                    setPresetSizes("1280x720");
+                                    setWidth("1280");
+                                    setHeight("720");
+                                }}
                                     type="button"
                                     className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
                                     style={presetSizes === "1280x720" ? { borderColor: "indigo" } : undefined}
                                 >
                                     1280x720
                                 </button>
-                                <button onClick={()=>{setPresetSizes("1080x1080")}}
+                                <button onClick={()=>{
+                                    setPresetSizes("1080x1080");
+                                    setWidth("1080");
+                                    setHeight("1080");
+                                }}
                                     type="button"
                                     className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
                                     style={presetSizes === "1080x1080" ? { borderColor: "indigo" } : undefined}
                                 >
                                     1080x1080
                                 </button>
-                                <button onClick={()=>{setPresetSizes("800x600")}}
+                                <button onClick={()=>{
+                                    setPresetSizes("800x600");
+                                    setWidth("800");
+                                    setHeight("600");
+                                }}
                                     type="button"
                                     className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
                                     style={presetSizes === "800x600" ? { borderColor: "indigo" } : undefined}
@@ -309,25 +424,6 @@ function Upload() {
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Quality Slider */}
-                            <div>
-                                <label className="block mb-3">
-                                    <span className="text-sm font-medium text-slate-700">Quality: {quality}%</span>
-                                </label>
-                                <input 
-                                    type="range"
-                                    min="1"
-                                    max="100"
-                                    value={quality}
-                                    onChange={(e)=> setQuality(Number(e.target.value))}
-                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                                />
-                                <div className="flex justify-between text-xs text-slate-500 mt-1">
-                                    <span>Low</span>
-                                    <span>High</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -335,10 +431,11 @@ function Upload() {
                     <div className="flex flex-col sm:flex-row gap-4 mt-10">
                         <button
                             type="button"
-                            className="flex-1 rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white shadow-lg transition-colors duration-200 hover:bg-slate-800"
+                            className="flex-1 rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white shadow-lg transition-colors duration-200 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={handleResize}
+                            disabled={isResizing || isUploading}
                         >
-                            Resize Images
+                            {isResizing ? "Resizing..." : "Resize Images"}
                         </button>
                         <button
                             type="button"
@@ -369,6 +466,64 @@ function Upload() {
                         </div>
                     </div>
                 </div>
+
+                {/* Resized Image Section */}
+                {resizedImageUrl && (
+                    <div id="resized-image-section" className="mt-12 bg-white/80 backdrop-blur rounded-3xl shadow-2xl p-8 md:p-12 border-2 border-indigo-200">
+                        <div className="mb-6">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-12 h-12 rounded-xl bg-linear-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                                    <ImageOutlinedIcon className="text-white" sx={{ fontSize: 28 }} />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-slate-900">Resized Image Ready!</h2>
+                                    {successMessage && (
+                                        <p className="text-sm text-green-600 font-medium mt-1">{successMessage}</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 rounded-2xl p-6 border-2 border-slate-200 mb-6">
+                            <div className="relative rounded-xl overflow-hidden bg-white shadow-lg border border-slate-200">
+                                <img
+                                    src={resizedImageUrl}
+                                    alt="Resized Image"
+                                    className="w-full h-auto max-h-[500px] object-contain"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    // Download the image
+                                    const link = document.createElement('a');
+                                    link.href = resizedImageUrl;
+                                    link.download = `resized-image-${Date.now()}.${imageFormat || 'png'}`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-lg transition-colors duration-200 hover:bg-indigo-700"
+                            >
+                                <DownloadOutlinedIcon fontSize="small" />
+                                Download Image
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    router.push("/dashboard");
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white border-2 border-indigo-600 py-3 text-sm font-semibold text-indigo-600 shadow transition-colors duration-200 hover:bg-indigo-50"
+                            >
+                                <DashboardOutlinedIcon fontSize="small" />
+                                Visit Dashboard
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <Footer />
