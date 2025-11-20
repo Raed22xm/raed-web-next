@@ -7,7 +7,7 @@ import AspectRatioOutlinedIcon from "@mui/icons-material/AspectRatioOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import PhotoSizeSelectActualOutlinedIcon from "@mui/icons-material/PhotoSizeSelectActualOutlined";
 import type { ChangeEvent } from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { useAuthGuard } from "@/services/protectpage";
 import { createResize } from "@/services/resize/resize";
@@ -16,6 +16,12 @@ import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 const inputClasses =
     "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60";
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const PRESET_SIZES = [
+    { label: "1920x1080", width: "1920", height: "1080" },
+    { label: "1280x720", width: "1280", height: "720" },
+    { label: "1080x1080", width: "1080", height: "1080" },
+    { label: "800x600", width: "800", height: "600" },
+];
 
 async function fileToDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -37,6 +43,19 @@ function Upload() {
     const [resizedImageUrl, setResizedImageUrl] = useState<string>("")
     const [successMessage, setSuccessMessage] = useState<string>("")
     const [imageDimensions, setImageDimensions] = useState<{ width: number, height: number } | null>(null)
+    const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
+    const uploadAbortController = useRef<AbortController | null>(null)
+    const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    function showToast(message: string, type: "success" | "error") {
+        if (toastTimeoutRef.current) {
+            clearTimeout(toastTimeoutRef.current)
+        }
+        setToast({ message, type })
+        toastTimeoutRef.current = setTimeout(() => {
+            setToast(null)
+        }, 4000)
+    }
     const router = useRouter()
 
     async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -68,12 +87,18 @@ function Upload() {
         setIsUploading(true)
 
         try {
+            if (uploadAbortController.current) {
+                uploadAbortController.current.abort()
+            }
+            const abortController = new AbortController()
+            uploadAbortController.current = abortController
             const base64 = await fileToDataUrl(file)
             const response = await fetch("/api/upload", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
+                signal: abortController.signal,
                 body: JSON.stringify({
                     file: base64,
                     options: {
@@ -93,14 +118,26 @@ function Upload() {
             }
 
             setUserImg(result.secure_url)
+            showToast("Image uploaded successfully", "success")
         } catch (error) {
-            console.error("Upload failed", error)
-            setUploadError(
-                error instanceof Error ? error.message : "Unexpected error"
-            )
+            if (error instanceof DOMException && error.name === "AbortError") {
+                console.info("Upload aborted")
+            } else {
+                console.error("Upload failed", error)
+                setUploadError(
+                    error instanceof Error ? error.message : "Unexpected error"
+                )
+                showToast(
+                    error instanceof Error ? error.message : "Unexpected upload error",
+                    "error"
+                )
+            }
         } finally {
             setIsUploading(false)
             e.target.value = ""
+            if (uploadAbortController.current) {
+                uploadAbortController.current = null
+            }
         }
     }
 
@@ -137,6 +174,14 @@ function Upload() {
                 setUserId(userIdFromStorage);
             } catch (error) {
                 console.error("Failed to parse userData from localStorage", error);
+            }
+        }
+    }, [])
+
+    useEffect(() => {
+        return () => {
+            if (toastTimeoutRef.current) {
+                clearTimeout(toastTimeoutRef.current)
             }
         }
     }, [])
@@ -227,6 +272,7 @@ function Upload() {
                 setResizedImageUrl(response.data.resizedImageUrl);
                 setSuccessMessage(response.data.message || "Image resized and uploaded successfully");
                 setUploadError(null);
+                showToast(response.data.message || "Image resized successfully", "success");
                 // Scroll to the resized image section
                 setTimeout(() => {
                     const element = document.getElementById("resized-image-section");
@@ -236,11 +282,16 @@ function Upload() {
                 }, 100);
             } else {
                 setUploadError("Resize completed but no image URL received");
+                showToast("Resize completed but no image URL received", "error");
             }
         } catch (error: any) {
             console.error("Resize failed", error);
             setUploadError(
                 error?.response?.data?.message || error?.message || "Failed to resize image. Please try again."
+            );
+            showToast(
+                error?.response?.data?.message || error?.message || "Failed to resize image. Please try again.",
+                "error"
             );
             setResizedImageUrl("");
             setSuccessMessage("");
@@ -256,6 +307,19 @@ function Upload() {
     return (
         <div className="min-h-screen bg-linear-to-br from-slate-100 via-white to-blue-50">
             <Navbar />
+            {toast && (
+                <div className="fixed top-6 right-6 z-50">
+                    <div
+                        className={`rounded-2xl px-4 py-3 shadow-lg text-sm font-semibold text-white transition ${
+                            toast.type === "success"
+                                ? "bg-emerald-500"
+                                : "bg-rose-500"
+                        }`}
+                    >
+                        {toast.message}
+                    </div>
+                </div>
+            )}
 
             <div className="max-w-6xl mx-auto px-6 py-12">
                 {/* Page Header */}
@@ -391,50 +455,27 @@ function Upload() {
                                 <span className="text-sm font-medium text-slate-700">Preset Sizes</span>
                             </label>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <button onClick={()=>{
-                                    setPresetSizes("1920x1080");
-                                    setWidth("1920");
-                                    setHeight("1080");
-                                }}
-                                    type="button"
-                                    className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
-                                    style={presetSizes === "1920x1080" ? { borderColor: "indigo" } : undefined}
-                                >
-                                    1920x1080
-                                </button>
-                                <button onClick={()=>{
-                                    setPresetSizes("1280x720");
-                                    setWidth("1280");
-                                    setHeight("720");
-                                }}
-                                    type="button"
-                                    className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
-                                    style={presetSizes === "1280x720" ? { borderColor: "indigo" } : undefined}
-                                >
-                                    1280x720
-                                </button>
-                                <button onClick={()=>{
-                                    setPresetSizes("1080x1080");
-                                    setWidth("1080");
-                                    setHeight("1080");
-                                }}
-                                    type="button"
-                                    className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
-                                    style={presetSizes === "1080x1080" ? { borderColor: "indigo" } : undefined}
-                                >
-                                    1080x1080
-                                </button>
-                                <button onClick={()=>{
-                                    setPresetSizes("800x600");
-                                    setWidth("800");
-                                    setHeight("600");
-                                }}
-                                    type="button"
-                                    className="px-4 py-2 rounded-lg border-2 border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
-                                    style={presetSizes === "800x600" ? { borderColor: "indigo" } : undefined}
-                                >
-                                    800x600
-                                </button>
+                                {PRESET_SIZES.map((preset) => {
+                                    const isActive = presetSizes === preset.label
+                                    return (
+                                        <button
+                                            key={preset.label}
+                                            onClick={() => {
+                                                setPresetSizes(preset.label);
+                                                setWidth(preset.width);
+                                                setHeight(preset.height);
+                                            }}
+                                            type="button"
+                                            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
+                                                isActive
+                                                    ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                                    : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            }`}
+                                        >
+                                            {preset.label}
+                                        </button>
+                                    )
+                                })}
                             </div>
                         </div>
 
