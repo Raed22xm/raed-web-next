@@ -355,7 +355,26 @@ function Upload() {
                                 <p className="text-sm text-red-600">{uploadError}</p>
                             )}
                             {isUploading && (
-                                <p className="text-sm text-indigo-600">Uploading...</p>
+                                <div className="w-full max-w-md mx-auto">
+                                    <p className="text-sm text-indigo-600 mb-3 text-center flex items-center justify-center gap-2">
+                                        <span className="h-2 w-2 rounded-full bg-indigo-500 animate-ping" />
+                                        Uploading image…
+                                    </p>
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                                        <div className="h-full w-full animate-pulse bg-gradient-to-r from-indigo-400 via-indigo-600 to-indigo-400" />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (uploadAbortController.current) {
+                                                uploadAbortController.current.abort();
+                                            }
+                                        }}
+                                        className="mt-3 text-xs font-semibold text-rose-600 hover:text-rose-500 underline"
+                                    >
+                                        Cancel upload
+                                    </button>
+                                </div>
                             )}
 
                             <div className="flex flex-wrap justify-center gap-4 mt-4">
