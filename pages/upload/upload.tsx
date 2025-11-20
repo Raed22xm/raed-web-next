@@ -15,6 +15,7 @@ import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 const inputClasses =
     "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60";
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 async function fileToDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -35,6 +36,7 @@ function Upload() {
     const [isResizing, setIsResizing] = useState<boolean>(false)
     const [resizedImageUrl, setResizedImageUrl] = useState<string>("")
     const [successMessage, setSuccessMessage] = useState<string>("")
+    const [imageDimensions, setImageDimensions] = useState<{ width: number, height: number } | null>(null)
     const router = useRouter()
 
     async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -43,11 +45,26 @@ function Upload() {
             return
         }
 
+        if (!file.type.startsWith("image/")) {
+            setUploadError("Please upload an image file (JPG, PNG, WebP, GIF)")
+            e.target.value = ""
+            return
+        }
+
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            setUploadError("File is too large. Please select an image under 10MB")
+            e.target.value = ""
+            return
+        }
+
         // Extract image format from file
         const fileExtension = file.name.split('.').pop()?.toLowerCase() || ""
         setImageFormat(fileExtension)
 
         setUploadError(null)
+        setResizedImageUrl("")
+        setSuccessMessage("")
+        setImageDimensions(null)
         setIsUploading(true)
 
         try {
@@ -71,6 +88,10 @@ function Upload() {
                 throw new Error(result?.error ?? "Upload failed")
             }
 
+            if (!result?.secure_url) {
+                throw new Error("Upload failed: missing image URL")
+            }
+
             setUserImg(result.secure_url)
         } catch (error) {
             console.error("Upload failed", error)
@@ -81,6 +102,19 @@ function Upload() {
             setIsUploading(false)
             e.target.value = ""
         }
+    }
+
+    function handleClearAll() {
+        setUserImg("")
+        setResizedImageUrl("")
+        setSuccessMessage("")
+        setUploadError(null)
+        setImageFormat("")
+        setWidth("")
+        setHeight("")
+        setPresetSizes("")
+        setAspect(false)
+        setImageDimensions(null)
     }
     
     const [width, setWidth  ] = useState<string>("")
@@ -106,6 +140,28 @@ function Upload() {
             }
         }
     }, [])
+
+    useEffect(() => {
+        if (!userImg) {
+            setImageDimensions(null)
+            return
+        }
+
+        const img = new Image()
+        img.onload = () => {
+            setImageDimensions({
+                width: img.naturalWidth,
+                height: img.naturalHeight
+            })
+        }
+        img.onerror = () => setImageDimensions(null)
+        img.src = userImg
+
+        return () => {
+            img.onload = null
+            img.onerror = null
+        }
+    }, [userImg])
     
     async function handleResize(){
         if (!userImg) {
@@ -129,9 +185,21 @@ function Upload() {
             finalHeight = presetHeight;
         }
 
-        // Validate width and height
-        if (!finalWidth || !finalHeight) {
-            setUploadError("Please enter width and height or select a preset size");
+        const parsedWidth = Number(finalWidth)
+        const parsedHeight = Number(finalHeight)
+        let finalWidthValue = Number.isFinite(parsedWidth) && parsedWidth > 0 ? parsedWidth : null
+        let finalHeightValue = Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : null
+
+        if (aspect && imageDimensions) {
+            if (finalWidthValue && !finalHeightValue) {
+                finalHeightValue = Math.round(finalWidthValue * (imageDimensions.height / imageDimensions.width))
+            } else if (!finalWidthValue && finalHeightValue) {
+                finalWidthValue = Math.round(finalHeightValue * (imageDimensions.width / imageDimensions.height))
+            }
+        }
+
+        if (!finalWidthValue || !finalHeightValue) {
+            setUploadError("Please enter valid width and height or select a preset size");
             return;
         }
 
@@ -141,8 +209,8 @@ function Upload() {
             imageFormat: imageFormat || "jpg",
             manageAspectRatio: aspect,
             size: "custom",
-            width: `${finalWidth}px`,
-            height: `${finalHeight}px`,
+            width: `${finalWidthValue}px`,
+            height: `${finalHeightValue}px`,
             outputFormat: outputFormat.toLowerCase() === "original" ? imageFormat || "jpg" : outputFormat.toLowerCase(),
             userId: userId
         }
@@ -440,6 +508,8 @@ function Upload() {
                         <button
                             type="button"
                             className="flex-1 rounded-xl bg-white border-2 border-slate-300 py-3 text-sm font-semibold text-slate-900 shadow transition-colors duration-200 hover:bg-slate-50"
+                            onClick={handleClearAll}
+                            disabled={isUploading || isResizing}
                         >
                             Clear All
                         </button>
@@ -532,4 +602,3 @@ function Upload() {
 }
 
 export default Upload;
-
