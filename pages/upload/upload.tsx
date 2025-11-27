@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 import Navbar from "../../components/navbar/navbar";
 import Footer from "../../components/footer/footer";
 import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
@@ -284,15 +285,14 @@ function Upload() {
                 setUploadError("Resize completed but no image URL received");
                 showToast("Resize completed but no image URL received", "error");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Resize failed", error);
-            setUploadError(
-                error?.response?.data?.message || error?.message || "Failed to resize image. Please try again."
-            );
-            showToast(
-                error?.response?.data?.message || error?.message || "Failed to resize image. Please try again.",
-                "error"
-            );
+            const message =
+                (error as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+                (error as { message?: string })?.message ||
+                "Failed to resize image. Please try again.";
+            setUploadError(message);
+            showToast(message, "error");
             setResizedImageUrl("");
             setSuccessMessage("");
         } finally {

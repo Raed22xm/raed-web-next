@@ -58,7 +58,7 @@ function Auth() {
         // ts is strict about the types any small issue and it will throw an error
 
         if(isLogin){
-            let response = await logIn(payload as LoginForm)
+            const response = await logIn(payload as LoginForm)
             if(response) {
                 alert("Logged in successfully")
                 localStorage.setItem("userData", JSON.stringify(response.data))
@@ -67,7 +67,7 @@ function Auth() {
                 alert("Error in logging in")
             }
         }else{
-            let response = await signUp(payload as SignupForm)
+            const response = await signUp(payload as SignupForm)
             if(response === 200) {
                 setSignupForm(
                     {

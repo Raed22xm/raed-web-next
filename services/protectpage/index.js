@@ -3,16 +3,16 @@ import { useRouter } from "next/router";
 
 export function useAuthGuard() {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const [ready] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return Boolean(window.localStorage.getItem("userData"));
+  });
 
   useEffect(() => {
-    const storedUser = window.localStorage.getItem("userData"); // adjust key
-    if (!storedUser) {
+    if (!ready) {
       router.replace("/auth");
-      return;
     }
-    setReady(true);
-  }, [router]);
+  }, [ready, router]);
 
   return ready;
 }

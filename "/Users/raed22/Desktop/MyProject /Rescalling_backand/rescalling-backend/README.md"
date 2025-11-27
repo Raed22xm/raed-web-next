@@ -1,0 +1,44 @@
+## On-Demand Rescaling – Backend (Express + MongoDB)
+
+### Prerequisites
+- Node.js 20 (`.nvmrc` provided)
+- npm (uses `package-lock.json`)
+- MongoDB (local or connection string)
+
+### Setup
+1) Copy `.env.example` to `.env` and set:
+   - `MONGO_URI`
+   - `PORT` (default 4001), `LOG_LEVEL` (optional)
+   - `ACCESS_TOKEN_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE`
+   - `REFRESH_TOKEN_SECRET_KEY`, `REFRESH_TOKEN_EXPIRE`
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+2) Install deps: `npm ci`
+
+### Development / Run
+- `npm start` (starts Express on `PORT`, default 4001)
+- Local CORS is configured for `http://localhost:3000`
+
+### API Base
+- `/api/v1/users`
+  - `POST /signup`
+  - `POST /login`
+  - `POST /logout`
+  - `POST /refresh-token`
+- `/api/v1/resize`
+  - `POST /resizeImg` (requires auth)
+  - `GET /all/:userId`
+  - `GET /:userId/:resizeId`
+  - `DELETE /:resizeId`
+- Health: `GET /healthz` (returns app uptime and Mongo connection state)
+- Logging: request logging + centralized error handler (pino)
+
+### Docker / Compose
+- Build: `docker build -t rescaling-backend .`
+- Run: `docker run -p 4001:4001 --env-file .env rescaling-backend`
+- With Mongo: `docker-compose up` (backend + mongo service)
+
+### Notes
+- Auth uses JWT access/refresh tokens; refresh token stored on user record.
+- Resizing uses Sharp and uploads to Cloudinary.
+- Quota: max 5 resizes per user per day (checked in controller).
+- Logging: uses pino; set `LOG_LEVEL` if needed.

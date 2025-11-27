@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 import Navbar from "../../components/navbar/navbar";
 import HowItWorks from "../../components/howItWorks/HowItWorks";
 import BrokenImageOutlinedIcon from '@mui/icons-material/BrokenImageOutlined';

@@ -1,30 +1,25 @@
 import AspectRatioSharpIcon from '@mui/icons-material/AspectRatioSharp';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 function Navbar() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [userData, setUserData] = useState(null);
+    const [userData, setUserData] = useState(() => {
+        if (typeof window === "undefined") {
+            return null;
+        }
+        const storedUserData = localStorage.getItem("userData");
+        if (!storedUserData) return null;
+        try {
+            return JSON.parse(storedUserData);
+        } catch (error) {
+            console.error("Failed to parse userData from localStorage", error);
+            return null;
+        }
+    });
+    const isLoggedIn = useMemo(() => Boolean(userData), [userData]);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const router = useRouter();
-    useEffect(() => {
-        const storedUserData = localStorage.getItem("userData");
-        if(storedUserData) {
-            try {
-                const parsedUserData = JSON.parse(storedUserData);
-                setUserData(parsedUserData);
-            } catch (error) {
-                console.error('Failed to parse userData from localStorage', error);
-                setUserData(null);
-            }
-            setIsLoggedIn(true);
-        } else {
-            setUserData(null);
-            setIsLoggedIn(false);
-        }
-
-    }, []);
     
     return (
         <div className='flex justify-between p-3 border-b items-center' >
@@ -95,7 +90,7 @@ function Navbar() {
                                         <button
                                             onClick={() => {
                                                 localStorage.removeItem("userData");
-                                                setIsLoggedIn(false);
+                                                setUserData(null);
                                                 setShowUserMenu(false);
                                                 router.push("/");
                                             }}

@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState, useEffect } from "react";
 import Navbar from "@/components/navbar/navbar";
@@ -165,9 +166,12 @@ function DashboardPage() {
                 setResizes([]);
                 setSelectedResizeId("");
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Failed to fetch resizes:", err);
-            setError(err?.response?.data?.message || err?.message || "Failed to fetch resizes");
+            const message =
+                (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data
+                    ?.message || (err as { message?: string })?.message || "Failed to fetch resizes";
+            setError(message);
             setResizes([]);
         } finally {
             setIsLoading(false);
@@ -194,9 +198,12 @@ function DashboardPage() {
             
             // Show success message (optional)
             alert("Resize deleted successfully");
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Failed to delete resize:", err);
-            alert(err?.response?.data?.message || err?.message || "Failed to delete resize");
+            const message =
+                (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data
+                    ?.message || (err as { message?: string })?.message || "Failed to delete resize";
+            alert(message);
         } finally {
             setIsDeleting(false);
         }
@@ -522,4 +529,3 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
-
