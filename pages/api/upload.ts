@@ -43,8 +43,16 @@ export default async function handler(
 
         res.status(200).json(result);
     } catch (error) {
-        console.error("Cloudinary upload failed:", error);
-        res.status(500).json({ error: "Failed to upload image" });
+        console.error("Cloudinary upload failed:", {
+            message: (error as { message?: string })?.message,
+            name: (error as { name?: string })?.name,
+            http_code: (error as { http_code?: number })?.http_code,
+        });
+
+        const message =
+            (error as { message?: string })?.message ??
+            "Failed to upload image";
+
+        res.status(500).json({ error: message });
     }
 }
-
