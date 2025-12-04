@@ -75,7 +75,7 @@ function Auth() {
             }
         } else {
             const response = await signUp(payload as SignupForm);
-            if (response === 200) {
+            if (response === 200 || response === 201) {
                 setSignupForm({
                     name: "",
                     email: "",

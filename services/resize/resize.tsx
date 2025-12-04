@@ -1,47 +1,6 @@
 import { resizeData } from "@/interfaces";
 import axios from "axios";
-
-function extractToken(data: unknown): string {
-    if (!data || typeof data !== "object") {
-        return "";
-    }
-
-    const record = data as Record<string, unknown>;
-    const fromAccessToken = record.accessToken;
-    if (typeof fromAccessToken === "string" && fromAccessToken.trim()) {
-        return fromAccessToken.trim();
-    }
-
-    const fromToken = record.token;
-    if (typeof fromToken === "string" && fromToken.trim()) {
-        return fromToken.trim();
-    }
-
-    if (record.data && typeof record.data === "object") {
-        const nested = extractToken(record.data);
-        if (nested) {
-            return nested;
-        }
-    }
-
-    return "";
-}
-
-// Helper function to get access token from localStorage
-function getAccessToken(): string {
-    if (typeof window !== "undefined") {
-        const storedUserData = localStorage.getItem("userData");
-        if (storedUserData) {
-            try {
-                const parsedUserData = JSON.parse(storedUserData);
-                return extractToken(parsedUserData);
-            } catch (error) {
-                console.error("Failed to parse userData from localStorage", error);
-            }
-        }
-    }
-    return "";
-}
+import { getAccessToken } from "@/services/auth/storage";
 
 // Helper function to get headers with Authorization
 function getAuthHeaders(): Record<string, string> {

@@ -14,6 +14,7 @@ import { useAuthGuard } from "@/services/protectpage";
 import { createResize } from "@/services/resize/resize";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
+import { getUserId } from "@/services/auth/storage";
 
 const inputClasses =
     "mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60";
@@ -170,16 +171,9 @@ function Upload() {
     const [outputFormat, setOutputFormat] = useState<string>("JPG");
 
     useEffect(() => {
-        // Get userId from localStorage
-        const storedUserData = localStorage.getItem("userData");
-        if (storedUserData) {
-            try {
-                const parsedUserData = JSON.parse(storedUserData);
-                const userIdFromStorage = parsedUserData?.user?._id || "";
-                setUserId(userIdFromStorage);
-            } catch (error) {
-                console.error("Failed to parse userData from localStorage", error);
-            }
+        const id = getUserId();
+        if (id) {
+            setUserId(id);
         }
     }, []);
 

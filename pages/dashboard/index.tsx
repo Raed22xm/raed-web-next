@@ -15,6 +15,7 @@ import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import { useAuthGuard } from "@/services/protectpage/index";
 import { useRouter } from "next/router";
 import { getAllResizes, deleteResize } from "@/services/resize/resize";
+import { getUserId } from "@/services/auth/storage";
 type ResizeStatus = "Ready" | "Processing" | "Failed";
 
 interface ResizeItem {
@@ -133,19 +134,9 @@ function DashboardPage() {
             setIsLoading(true);
             setError(null);
             
-            // Get userId from localStorage
-            const storedUserData = localStorage.getItem("userData");
-            if (!storedUserData) {
-                setError("User not authenticated");
-                setIsLoading(false);
-                return;
-            }
-
-            const parsedUserData = JSON.parse(storedUserData);
-            const userId = parsedUserData?.user?._id || "";
-            
+            const userId = getUserId();
             if (!userId) {
-                setError("User ID not found");
+                setError("User not authenticated");
                 setIsLoading(false);
                 return;
             }
