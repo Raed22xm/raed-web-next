@@ -94,6 +94,9 @@ function Upload() {
             const abortController = new AbortController();
             uploadAbortController.current = abortController;
             const base64 = await fileToDataUrl(file);
+            const normalizedFormat =
+                outputFormat?.toLowerCase() === "original" ? undefined : outputFormat?.toLowerCase();
+
             const response = await fetch("/api/upload", {
                 method: "POST",
                 headers: {
@@ -102,9 +105,7 @@ function Upload() {
                 signal: abortController.signal,
                 body: JSON.stringify({
                     file: base64,
-                    options: {
-                        format: outputFormat?.toLowerCase(),
-                    },
+                    options: normalizedFormat ? { format: normalizedFormat } : undefined,
                 }),
             });
 

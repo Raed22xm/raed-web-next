@@ -59,7 +59,16 @@ function Auth() {
             const response = await logIn(payload as LoginForm);
             if (response) {
                 alert("Logged in successfully");
-                localStorage.setItem("userData", JSON.stringify(response.data));
+                const userData = response.data;
+                const accessToken =
+                    userData?.accessToken ||
+                    userData?.token ||
+                    userData?.data?.accessToken ||
+                    userData?.data?.token;
+                const normalizedUserData = accessToken
+                    ? { ...userData, accessToken }
+                    : userData;
+                localStorage.setItem("userData", JSON.stringify(normalizedUserData));
                 router.push("/");
             } else {
                 alert("Error in logging in");
