@@ -8,19 +8,25 @@ function getEnvVar(name) {
     return value.trim();
 }
 
-const cloudinaryConfig = {
-    cloud_name: getEnvVar("CLOUDINARY_CLOUD_NAME"),
-    api_key: getEnvVar("CLOUDINARY_API_KEY"),
-    api_secret: getEnvVar("CLOUDINARY_API_SECRET"),
-    secure: true,
-};
-
-cloudinary.config(cloudinaryConfig);
+let isConfigured = false;
+function ensureConfigured() {
+    if (isConfigured) return;
+    const cloudinaryConfig = {
+        cloud_name: getEnvVar("CLOUDINARY_CLOUD_NAME"),
+        api_key: getEnvVar("CLOUDINARY_API_KEY"),
+        api_secret: getEnvVar("CLOUDINARY_API_SECRET"),
+        secure: true,
+    };
+    cloudinary.config(cloudinaryConfig);
+    isConfigured = true;
+}
 
 export function uploadBufferToCloudinary(buffer, options = {}) {
     if (!Buffer.isBuffer(buffer)) {
         throw new Error("uploadBufferToCloudinary expects a Buffer.");
     }
+
+    ensureConfigured();
 
     const sanitizedOptions = {};
     if (options?.format) {
