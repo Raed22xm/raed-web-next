@@ -36,10 +36,6 @@ async function logIn(payload: LoginForm) {
         return userResponse;
     } catch (error: unknown) {
         console.error("Login error:", error);
-        if (error && typeof error === "object" && "response" in error) {
-            const err = error as { response?: unknown };
-            return err.response ?? null;
-        }
         return null;
     }
 }
