@@ -6,6 +6,8 @@ import CloudUploadOutlinedIcon from "@mui/icons-material/CloudUploadOutlined";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import AspectRatioOutlinedIcon from "@mui/icons-material/AspectRatioOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import RotateRightOutlinedIcon from "@mui/icons-material/RotateRightOutlined";
+import CropOutlinedIcon from "@mui/icons-material/CropOutlined";
 import PhotoSizeSelectActualOutlinedIcon from "@mui/icons-material/PhotoSizeSelectActualOutlined";
 import type { ChangeEvent } from "react";
 import { useState, useEffect, useRef } from "react";
@@ -158,6 +160,12 @@ function Upload() {
         setPresetSizes("");
         setAspect(false);
         setImageDimensions(null);
+        setRotate("0");
+        setCropEnabled(false);
+        setCropLeft("");
+        setCropTop("");
+        setCropWidth("");
+        setCropHeight("");
     }
 
     const [width, setWidth] = useState<string>("");
@@ -169,6 +177,14 @@ function Upload() {
     const [presetSizes, setPresetSizes] = useState<string>("");
 
     const [outputFormat, setOutputFormat] = useState<string>("JPG");
+
+    // Rotate and Crop state
+    const [rotate, setRotate] = useState<string>("0");
+    const [cropEnabled, setCropEnabled] = useState<boolean>(false);
+    const [cropLeft, setCropLeft] = useState<string>("");
+    const [cropTop, setCropTop] = useState<string>("");
+    const [cropWidth, setCropWidth] = useState<string>("");
+    const [cropHeight, setCropHeight] = useState<string>("");
 
     useEffect(() => {
         const id = getUserId();
@@ -247,6 +263,16 @@ function Upload() {
             return;
         }
 
+        // Build crop object if enabled
+        const cropData = cropEnabled && cropLeft && cropTop && cropWidth && cropHeight
+            ? {
+                left: parseInt(cropLeft) || 0,
+                top: parseInt(cropTop) || 0,
+                width: parseInt(cropWidth) || 0,
+                height: parseInt(cropHeight) || 0,
+            }
+            : undefined;
+
         // Format the data according to the required structure
         const resizePayload = {
             imageLink: userImg,
@@ -257,6 +283,8 @@ function Upload() {
             height: `${finalHeightValue}px`,
             outputFormat: outputFormat.toLowerCase() === "original" ? imageFormat || "jpg" : outputFormat.toLowerCase(),
             userId: userId,
+            rotate: rotate !== "0" ? parseInt(rotate) : undefined,
+            crop: cropData,
         };
 
         setIsResizing(true);
@@ -308,9 +336,8 @@ function Upload() {
             {toast && (
                 <div className="fixed top-6 right-6 z-50">
                     <div
-                        className={`rounded-2xl px-4 py-3 shadow-lg text-sm font-semibold text-white transition ${
-                            toast.type === "success" ? "bg-emerald-500" : "bg-rose-500"
-                        }`}
+                        className={`rounded-2xl px-4 py-3 shadow-lg text-sm font-semibold text-white transition ${toast.type === "success" ? "bg-emerald-500" : "bg-rose-500"
+                            }`}
                     >
                         {toast.message}
                     </div>
@@ -468,11 +495,10 @@ function Upload() {
                                                 setHeight(preset.height);
                                             }}
                                             type="button"
-                                            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                                                isActive
+                                            className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${isActive
                                                     ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                                                     : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
-                                            }`}
+                                                }`}
                                         >
                                             {preset.label}
                                         </button>
@@ -498,11 +524,10 @@ function Upload() {
                                             setOutputFormat("JPG");
                                         }}
                                         type="button"
-                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                                            outputFormat === "JPG"
+                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${outputFormat === "JPG"
                                                 ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                                                 : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
-                                        }`}
+                                            }`}
                                     >
                                         JPG
                                     </button>
@@ -511,11 +536,10 @@ function Upload() {
                                             setOutputFormat("PNG");
                                         }}
                                         type="button"
-                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                                            outputFormat === "PNG"
+                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${outputFormat === "PNG"
                                                 ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                                                 : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
-                                        }`}
+                                            }`}
                                     >
                                         PNG
                                     </button>
@@ -524,11 +548,10 @@ function Upload() {
                                             setOutputFormat("WebP");
                                         }}
                                         type="button"
-                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                                            outputFormat === "WebP"
+                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${outputFormat === "WebP"
                                                 ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                                                 : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
-                                        }`}
+                                            }`}
                                     >
                                         WebP
                                     </button>
@@ -537,16 +560,99 @@ function Upload() {
                                             setOutputFormat("Original");
                                         }}
                                         type="button"
-                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                                            outputFormat === "Original"
+                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${outputFormat === "Original"
                                                 ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                                                 : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
-                                        }`}
+                                            }`}
                                     >
                                         Original
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Rotate Options */}
+                        <div className="border-t border-slate-200 pt-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <RotateRightOutlinedIcon className="text-indigo-600" />
+                                <h3 className="text-xl font-semibold text-slate-900">Rotate Image</h3>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {["0", "90", "180", "270"].map((deg) => (
+                                    <button
+                                        key={deg}
+                                        onClick={() => setRotate(deg)}
+                                        type="button"
+                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${rotate === deg
+                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            }`}
+                                    >
+                                        {deg}°
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Crop Options */}
+                        <div className="border-t border-slate-200 pt-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <CropOutlinedIcon className="text-indigo-600" />
+                                <h3 className="text-xl font-semibold text-slate-900">Crop Image</h3>
+                                <label className="ml-auto flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={cropEnabled}
+                                        onChange={(e) => setCropEnabled(e.target.checked)}
+                                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span className="text-sm font-medium text-slate-600">Enable Crop</span>
+                                </label>
+                            </div>
+                            {cropEnabled && (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <label className="block">
+                                        <span className="text-sm font-medium text-slate-700">Left (px)</span>
+                                        <input
+                                            type="number"
+                                            value={cropLeft}
+                                            onChange={(e) => setCropLeft(e.target.value)}
+                                            placeholder="0"
+                                            className={inputClasses}
+                                        />
+                                    </label>
+                                    <label className="block">
+                                        <span className="text-sm font-medium text-slate-700">Top (px)</span>
+                                        <input
+                                            type="number"
+                                            value={cropTop}
+                                            onChange={(e) => setCropTop(e.target.value)}
+                                            placeholder="0"
+                                            className={inputClasses}
+                                        />
+                                    </label>
+                                    <label className="block">
+                                        <span className="text-sm font-medium text-slate-700">Width (px)</span>
+                                        <input
+                                            type="number"
+                                            value={cropWidth}
+                                            onChange={(e) => setCropWidth(e.target.value)}
+                                            placeholder="200"
+                                            className={inputClasses}
+                                        />
+                                    </label>
+                                    <label className="block">
+                                        <span className="text-sm font-medium text-slate-700">Height (px)</span>
+                                        <input
+                                            type="number"
+                                            value={cropHeight}
+                                            onChange={(e) => setCropHeight(e.target.value)}
+                                            placeholder="200"
+                                            className={inputClasses}
+                                        />
+                                    </label>
+                                </div>
+                            )}
                         </div>
                     </div>
 
