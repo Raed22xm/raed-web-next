@@ -496,8 +496,8 @@ function Upload() {
                                             }}
                                             type="button"
                                             className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${isActive
-                                                    ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                                    : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
                                                 }`}
                                         >
                                             {preset.label}
@@ -525,8 +525,8 @@ function Upload() {
                                         }}
                                         type="button"
                                         className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${outputFormat === "JPG"
-                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                            : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
                                             }`}
                                     >
                                         JPG
@@ -537,8 +537,8 @@ function Upload() {
                                         }}
                                         type="button"
                                         className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${outputFormat === "PNG"
-                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                            : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
                                             }`}
                                     >
                                         PNG
@@ -549,8 +549,8 @@ function Upload() {
                                         }}
                                         type="button"
                                         className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${outputFormat === "WebP"
-                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                            : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
                                             }`}
                                     >
                                         WebP
@@ -561,8 +561,8 @@ function Upload() {
                                         }}
                                         type="button"
                                         className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${outputFormat === "Original"
-                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                            : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
                                             }`}
                                     >
                                         Original
@@ -584,8 +584,8 @@ function Upload() {
                                         onClick={() => setRotate(deg)}
                                         type="button"
                                         className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${rotate === deg
-                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                            : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
                                             }`}
                                     >
                                         {deg}°
@@ -677,23 +677,86 @@ function Upload() {
                     </div>
                 </div>
 
-                {/* Image Info Section */}
-                <div className="mt-12 bg-white/60 backdrop-blur rounded-2xl shadow-lg p-8 border border-slate-200">
-                    <div className="grid md:grid-cols-3 gap-6">
-                        <div className="text-center">
-                            <ImageOutlinedIcon className="text-indigo-600 mx-auto mb-3" fontSize="large" />
-                            <h3 className="font-semibold text-slate-900 mb-2">Format Support</h3>
-                            <p className="text-sm text-slate-600">JPG, PNG, WebP, GIF</p>
+                {/* Usage Rules & Limits Section */}
+                <div className="mt-12 bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-lg p-8 border border-indigo-100">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                         </div>
-                        <div className="text-center">
-                            <AspectRatioOutlinedIcon className="text-indigo-600 mx-auto mb-3" fontSize="large" />
-                            <h3 className="font-semibold text-slate-900 mb-2">Smart Resizing</h3>
-                            <p className="text-sm text-slate-600">Maintain aspect ratios</p>
+                        <h2 className="text-xl font-bold text-slate-900">Usage Rules & Limits</h2>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                        {/* Left Column */}
+                        <div className="space-y-3">
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                    <LockOutlinedIcon className="text-green-600" sx={{ fontSize: 18 }} />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-slate-900 text-sm">Authentication</h4>
+                                    <p className="text-xs text-slate-500">Must be logged in to resize images</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-amber-200 bg-amber-50/50">
+                                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-amber-800 text-sm">Rate Limiting</h4>
+                                    <p className="text-xs text-amber-700">Maximum <strong>5 transformations</strong> per day per user</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-slate-900 text-sm">File Validation</h4>
+                                    <p className="text-xs text-slate-500">Max file size: <strong>3MB</strong> | Max dimensions: <strong>2000px</strong></p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="text-center">
-                            <PhotoSizeSelectActualOutlinedIcon className="text-indigo-600 mx-auto mb-3" fontSize="large" />
-                            <h3 className="font-semibold text-slate-900 mb-2">High Quality</h3>
-                            <p className="text-sm text-slate-600">Preserve image quality</p>
+
+                        {/* Right Column */}
+                        <div className="space-y-3">
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                    <ImageOutlinedIcon className="text-purple-600" sx={{ fontSize: 18 }} />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-slate-900 text-sm">Supported Formats</h4>
+                                    <p className="text-xs text-slate-500">JPG, PNG, WebP, GIF</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                    <AspectRatioOutlinedIcon className="text-indigo-600" sx={{ fontSize: 18 }} />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-slate-900 text-sm">Features</h4>
+                                    <p className="text-xs text-slate-500">Resize, Crop, Rotate, Format Conversion</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                    <PhotoSizeSelectActualOutlinedIcon className="text-emerald-600" sx={{ fontSize: 18 }} />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-slate-900 text-sm">Preset Sizes</h4>
+                                    <p className="text-xs text-slate-500">1920×1080, 1280×720, 1080×1080, 800×600</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
