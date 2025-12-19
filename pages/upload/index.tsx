@@ -166,6 +166,7 @@ function Upload() {
         setCropTop("");
         setCropWidth("");
         setCropHeight("");
+        setFilter("none");
     }
 
     const [width, setWidth] = useState<string>("");
@@ -185,6 +186,7 @@ function Upload() {
     const [cropTop, setCropTop] = useState<string>("");
     const [cropWidth, setCropWidth] = useState<string>("");
     const [cropHeight, setCropHeight] = useState<string>("");
+    const [filter, setFilter] = useState<string>("none");
 
     useEffect(() => {
         const id = getUserId();
@@ -285,6 +287,7 @@ function Upload() {
             userId: userId,
             rotate: rotate !== "0" ? parseInt(rotate) : undefined,
             crop: cropData,
+            filter: filter !== "none" ? filter : undefined,
         };
 
         setIsResizing(true);
@@ -653,6 +656,31 @@ function Upload() {
                                     </label>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Filter Options */}
+                        <div className="border-t border-slate-200 pt-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                </svg>
+                                <h3 className="text-xl font-semibold text-slate-900">Filter Effect</h3>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                {["none", "grayscale", "blur", "sharpen", "negate"].map((f) => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setFilter(f)}
+                                        type="button"
+                                        className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors capitalize ${filter === f
+                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            }`}
+                                    >
+                                        {f === "none" ? "No Filter" : f}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
