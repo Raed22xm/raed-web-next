@@ -266,23 +266,13 @@ function Upload() {
         }
 
         // Build crop object if enabled
-        console.log("DEBUG - Crop State:", {
-            cropEnabled,
-            cropWidth,
-            cropHeight,
-            cropLeft,
-            cropTop,
-            typeWidth: typeof cropWidth,
-            typeHeight: typeof cropHeight
-        });
-
-        // Note: cropLeft and cropTop can be "0" which is valid, so check for non-empty string
-        const cropData = cropEnabled && cropWidth && cropHeight
+        // Default to 200px if width/height are empty (user relying on placeholder)
+        const cropData = cropEnabled
             ? {
                 left: parseInt(cropLeft) || 0,
                 top: parseInt(cropTop) || 0,
-                width: parseInt(cropWidth),
-                height: parseInt(cropHeight),
+                width: parseInt(cropWidth) || 200,
+                height: parseInt(cropHeight) || 200,
             }
             : undefined;
 
@@ -300,8 +290,6 @@ function Upload() {
             crop: cropData,
             filter: filter !== "none" ? filter : undefined,
         };
-
-        console.log("DEBUG - Resize payload:", JSON.stringify(resizePayload, null, 2));
 
         setIsResizing(true);
         setUploadError(null);
