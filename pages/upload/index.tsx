@@ -291,6 +291,8 @@ function Upload() {
             filter: filter !== "none" ? filter : undefined,
         };
 
+        console.log("DEBUG - Resize payload:", JSON.stringify(resizePayload, null, 2));
+
         setIsResizing(true);
         setUploadError(null);
 
