@@ -266,6 +266,16 @@ function Upload() {
         }
 
         // Build crop object if enabled
+        console.log("DEBUG - Crop State:", {
+            cropEnabled,
+            cropWidth,
+            cropHeight,
+            cropLeft,
+            cropTop,
+            typeWidth: typeof cropWidth,
+            typeHeight: typeof cropHeight
+        });
+
         // Note: cropLeft and cropTop can be "0" which is valid, so check for non-empty string
         const cropData = cropEnabled && cropWidth && cropHeight
             ? {
