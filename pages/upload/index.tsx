@@ -266,12 +266,13 @@ function Upload() {
         }
 
         // Build crop object if enabled
-        const cropData = cropEnabled && cropLeft && cropTop && cropWidth && cropHeight
+        // Note: cropLeft and cropTop can be "0" which is valid, so check for non-empty string
+        const cropData = cropEnabled && cropWidth && cropHeight
             ? {
                 left: parseInt(cropLeft) || 0,
                 top: parseInt(cropTop) || 0,
-                width: parseInt(cropWidth) || 0,
-                height: parseInt(cropHeight) || 0,
+                width: parseInt(cropWidth),
+                height: parseInt(cropHeight),
             }
             : undefined;
 
@@ -673,8 +674,8 @@ function Upload() {
                                         onClick={() => setFilter(f)}
                                         type="button"
                                         className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors capitalize ${filter === f
-                                                ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                                                : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
+                                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                            : "border-slate-200 bg-white text-slate-700 hover:border-indigo-500 hover:bg-indigo-50"
                                             }`}
                                     >
                                         {f === "none" ? "No Filter" : f}
